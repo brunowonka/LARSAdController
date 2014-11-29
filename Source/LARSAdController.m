@@ -28,6 +28,12 @@
 #import "LARSAdController.h"
 #import "TOLAdAdapter.h"
 
+typedef NS_ENUM(NSInteger, LARSAdControllerAdapterInstanceTYpe){
+    LARSAdControllerAdapterInstanceBanner =  0,
+    LARSAdControllerAdapterInstanceInterstitial
+};
+
+
 NSString * const kLARSAdObserverKeyPathAdLoaded = @"adLoaded";
 NSString * const kLARSAdObserverKeyPathIsAdVisible = @"adVisible";
 
@@ -79,6 +85,7 @@ NSString * const kLARSAdObserverKeyPathIsAdVisible = @"adVisible";
 @property (strong, nonatomic, readwrite) NSMutableArray *registeredClasses;
 @property (strong, nonatomic, readwrite) NSMutableDictionary *adapterClassPublisherIds;
 @property (strong, nonatomic, readwrite) NSMutableDictionary *adapterInstances;
+@property (strong, nonatomic, readwrite) NSMutableDictionary *adapterInterstitialInstances;
 
 @end
 
@@ -101,6 +108,7 @@ CGFloat const kLARSAdContainerHeightPod = 50.0f;
         _sharedManager.registeredClasses = [NSMutableArray array];
         _sharedManager.adapterClassPublisherIds = [NSMutableDictionary dictionary];
         _sharedManager.adapterInstances = [NSMutableDictionary dictionary];
+        _sharedManager.adapterInterstitialInstances = [NSMutableDictionary dictionary];
         _sharedManager.instancesToCleanUp = [NSMutableSet set];
         _sharedManager.suspended = NO;
     });
@@ -544,14 +552,21 @@ CGFloat const kLARSAdContainerHeightPod = 50.0f;
     else if (index < self.registeredClasses.count) {
         Class currentClass = [self.registeredClasses objectAtIndex:index];
         
-        if([self startAdNetworkAdapterClass:currentClass] == NO){
+        if([self startAdNetworkAdapterClass:currentClass withType:LARSAdControllerAdapterInstanceBanner] == NO){
             [self adFailedForNetworkAdapterClass:currentClass];
         }
     }
 }
 
-- (BOOL)startAdNetworkAdapterClass:(Class)klass {
-    NSObject <TOLAdAdapter> *adapter = [self.adapterInstances objectForKey:NSStringFromClass(klass)];
+- (BOOL)startAdNetworkAdapterClass:(Class)klass withType:(LARSAdControllerAdapterInstanceTYpe)type {
+    
+    NSObject <TOLAdAdapter> *adapter = nil;
+    if( type == LARSAdControllerAdapterInstanceBanner ) {
+        adapter = [self.adapterInstances objectForKey:NSStringFromClass(klass)];
+    } else {
+        adapter = [self.adapterInterstitialInstances objectForKey:NSStringFromClass(klass)];
+    }
+
     
     if (!adapter) {
         TOLLog(@"Creating new instance of adapter class \"%@\"", NSStringFromClass(klass));
@@ -591,74 +606,93 @@ CGFloat const kLARSAdContainerHeightPod = 50.0f;
         }
 #pragma clang diagnostic pop
         
-        if([adapter respondsToSelector:@selector(startAdRequests)]){
+
+        if( type == LARSAdControllerAdapterInstanceBanner ) {
+            if([adapter respondsToSelector:@selector(startAdRequests)]){
+                [adapter startAdRequests];
+            }
+            
+            TOLLog(@"Successfully created instance of \"%@\"", NSStringFromClass(klass));
+            
+            [self.adapterInstances setObject:adapter forKey:NSStringFromClass(klass)];
+            
+            if (adapter.adVisible) {
+                adapter.bannerView.frame = [self onScreenBannerFrameForAdapter:adapter
+                                                           withPinningLocation:self.pinningLocation];
+            }
+            else{
+                adapter.bannerView.frame = [self offScreenBannerFrameForAdapter:adapter
+                                                      presentationAnimationType:self.presentationType];
+            }
+            adapter.bannerView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin |
+                                                   UIViewAutoresizingFlexibleRightMargin);
+            
+            switch (self.pinningLocation) {
+                case LARSAdControllerPinLocationBottom:
+                    adapter.bannerView.autoresizingMask |= UIViewAutoresizingFlexibleTopMargin;
+                    break;
+                case LARSAdControllerPinLocationTop:
+                    adapter.bannerView.autoresizingMask |= UIViewAutoresizingFlexibleBottomMargin;
+                    break;
+            }
+            
+            [adapter addObserver:self
+                      forKeyPath:kLARSAdObserverKeyPathIsAdVisible
+                         options:NSKeyValueObservingOptionNew
+                         context:nil];
+            
+            [self.clippingContainer addSubview:adapter.bannerView];
+            
+            if ([adapter respondsToSelector:@selector(adLoaded)]) {
+                [adapter addObserver:self
+                          forKeyPath:kLARSAdObserverKeyPathAdLoaded
+                             options:NSKeyValueObservingOptionNew
+                             context:nil];
+            }
+        } else if( type == LARSAdControllerAdapterInstanceInterstitial ) {
+            if( [adapter respondsToSelector:@selector(loadInterstitial)] && [adapter respondsToSelector:@selector(displayInterstitial)] ) {
+                [self.adapterInterstitialInstances setObject:adapter forKey:NSStringFromClass(klass)];
+                // TODO listeners
+            } else {
+                return NO;
+            }
+        } else {
+            return NO;
+        }
+    }
+    if( type == LARSAdControllerAdapterInstanceBanner ) {
+        // logic below only works for banner adapter instances
+        
+        
+        if([adapter respondsToSelector:@selector(pauseAdRequests)] &&
+           [adapter respondsToSelector:@selector(startAdRequests)]) {
+            //If adapter implements pauseAdRequests, then we'll need to
+            // call startAdRequests here.  If it does not implement it,
+            // then we know that we simply deallocated the instance and
+            // don't need to call this since it was called above when
+            // we created the new instance again.
             [adapter startAdRequests];
         }
         
-        TOLLog(@"Successfully created instance of \"%@\"", NSStringFromClass(klass));
-        
-        [self.adapterInstances setObject:adapter forKey:NSStringFromClass(klass)];
-        
-        if (adapter.adVisible) {
-            adapter.bannerView.frame = [self onScreenBannerFrameForAdapter:adapter
-                                                       withPinningLocation:self.pinningLocation];
-        }
-        else{
-            adapter.bannerView.frame = [self offScreenBannerFrameForAdapter:adapter
-                                                  presentationAnimationType:self.presentationType];
-        }
-        adapter.bannerView.autoresizingMask = (UIViewAutoresizingFlexibleLeftMargin |
-                                               UIViewAutoresizingFlexibleRightMargin);
-        
-        switch (self.pinningLocation) {
-            case LARSAdControllerPinLocationBottom:
-                adapter.bannerView.autoresizingMask |= UIViewAutoresizingFlexibleTopMargin;
-                break;
-            case LARSAdControllerPinLocationTop:
-                adapter.bannerView.autoresizingMask |= UIViewAutoresizingFlexibleBottomMargin;
-                break;
-        }
-        
-        [adapter addObserver:self
-                  forKeyPath:kLARSAdObserverKeyPathIsAdVisible
-                     options:NSKeyValueObservingOptionNew
-                     context:nil];
-      
-        [self.clippingContainer addSubview:adapter.bannerView];
-      
+        //Since we just allocated an instance of this class, the ad banner might
+        //  not actually have an ad loaded to display. check if ad
+        //  is loaded before actually displaying it if the ad adapter
+        //  supports it. makes for a much cleaner visual experience
         if ([adapter respondsToSelector:@selector(adLoaded)]) {
-          [adapter addObserver:self
-                    forKeyPath:kLARSAdObserverKeyPathAdLoaded
-                       options:NSKeyValueObservingOptionNew
-                       context:nil];
+            if (adapter.adLoaded && !self.isSuspended) {
+                [self animateBannerForAdapterVisible:adapter
+                                      withCompletion:nil];
+            }
         }
-    }
-    else if([adapter respondsToSelector:@selector(pauseAdRequests)] &&
-            [adapter respondsToSelector:@selector(startAdRequests)]) {
-        //If adapter implements pauseAdRequests, then we'll need to
-        // call startAdRequests here.  If it does not implement it,
-        // then we know that we simply deallocated the instance and
-        // don't need to call this since it was called above when
-        // we created the new instance again.
-        [adapter startAdRequests];
-    }
-    
-    //Since we just allocated an instance of this class, the ad banner might
-    //  not actually have an ad loaded to display. check if ad
-    //  is loaded before actually displaying it if the ad adapter
-    //  supports it. makes for a much cleaner visual experience
-    if ([adapter respondsToSelector:@selector(adLoaded)]) {
-        if (adapter.adLoaded && !self.isSuspended) {
+        else if (adapter.adVisible == NO && !self.isSuspended) {
             [self animateBannerForAdapterVisible:adapter
                                   withCompletion:nil];
         }
+        
+        return YES;
+    } else {
+        return YES;
     }
-    else if (adapter.adVisible == NO && !self.isSuspended) {
-        [self animateBannerForAdapterVisible:adapter
-                              withCompletion:nil];
-    }
-    
-    return YES;
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath
@@ -841,5 +875,47 @@ CGFloat const kLARSAdContainerHeightPod = 50.0f;
     return NSStringFromClass(adapter.class);
 }
 
+
+#pragma mark - interstitial methods
+- (void)loadInterstitial {
+    NSArray *instances = [self.adapterInterstitialInstances allValues];
+    
+    BOOL found = NO;
+    
+    for (id <TOLAdAdapter> adapterInstance in instances) {
+        if( [adapterInstance respondsToSelector:@selector(loadInterstitial)] ) {
+            [adapterInstance loadInterstitial];
+            found = YES;
+            break;
+        }
+    }
+    
+    if( ! found ) {
+        // register new class and try to use it
+        // interstitial instances are not cleaned up after use, so these should only run once
+        for( NSUInteger index = 0 ; index < self.registeredClasses.count ; index++ ) {
+            Class currentClass = [self.registeredClasses objectAtIndex:index];
+            if([self startAdNetworkAdapterClass:currentClass withType:LARSAdControllerAdapterInstanceInterstitial] == YES){
+                [self loadInterstitial];
+                break;
+            }
+        }
+    }
+}
+
+- (void)displayInterstitial {
+    NSArray *instances = [self.adapterInterstitialInstances allValues];
+    BOOL found = NO;
+    for (id <TOLAdAdapter> adapterInstance in instances) {
+        if( [adapterInstance respondsToSelector:@selector(displayInterstitial)] ) {
+            [adapterInstance displayInterstitial];
+            found = YES;
+            break;
+        }
+    }
+    if( ! found ) {
+        TOLWLog(@"it seems display interstitial was improperly called, cannot find any instances of AdAadapter");
+    }
+}
 
 @end

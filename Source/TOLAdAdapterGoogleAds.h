@@ -28,13 +28,15 @@
 #import "TOLAdAdapter.h"
 #import "GADBannerViewDelegate.h"
 #import "GADBannerView.h"
+#import "GADInterstitial.h"
 
-@interface TOLAdAdapterGoogleAds : NSObject <TOLAdAdapter, GADBannerViewDelegate>
+@interface TOLAdAdapterGoogleAds : NSObject <TOLAdAdapter, GADBannerViewDelegate,GADInterstitialDelegate>
 
 @property (weak, nonatomic) id<LARSAdControllerDelegate> adManager;
 @property (nonatomic) BOOL adVisible;
 @property (strong, nonatomic) GADBannerView *bannerView;
 @property (copy, nonatomic) NSString *publisherId;
 @property (weak, nonatomic) UIViewController *parentViewController;
+@property (strong,nonatomic) GADInterstitial * interstitial;
 
 @end

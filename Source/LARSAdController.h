@@ -50,6 +50,9 @@ typedef NS_ENUM(NSInteger, LARSAdControllerPinLocation){
     LARSAdControllerPinLocationTop
 };
 
+
+
+
 @protocol LARSBannerVisibilityDelegate;
 
 @interface LARSAdContainer : UIView
@@ -91,6 +94,13 @@ typedef NS_ENUM(NSInteger, LARSAdControllerPinLocation){
     requests will be included in this dictionary.
  */
 @property (strong, nonatomic, readonly) NSMutableDictionary *adapterInstances;
+
+/** The instances for each INTERSTITIAL ad adapter that are currently instantiated. Not all registered ad adapters
+ will be instantiated at any given time. Only the active ad adapters currently waiting on ad network
+ requests will be included in this dictionary.
+ */
+@property (strong,nonatomic,readonly) NSMutableDictionary *adapterInterstitialInstances;
+
 
 /** The presentation type for the ad banner to use when it presents and hides itself. You can think 
     of this as the location that ad banner will be at before it animates on screen.
@@ -169,6 +179,15 @@ typedef NS_ENUM(NSInteger, LARSAdControllerPinLocation){
 /** Resume again after suspend. Will make banners re-appear (move in screen).
  */
 - (void)resume;
+
+
+/** prepare loading interstitial (full-screen) ad
+ */
+-(void) loadInterstitial;
+
+/** display interstitial (full-screen) ad
+ */
+-(void) displayInterstitial;
 
 @end
 

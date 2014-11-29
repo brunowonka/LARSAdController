@@ -106,4 +106,13 @@
  */
 @property (nonatomic, readonly) BOOL adLoaded;
 
+
+/** starts loading interstitial (full-screen) ad
+ */
+-(void) loadInterstitial;
+
+/** displays interstitial (full-screen) ad if available
+ */
+-(void) displayInterstitial;
+
 @end
