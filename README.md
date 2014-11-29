@@ -126,12 +126,12 @@ To make your life even _easier_, all you need to do is have each of your view co
 
 
 ###Full-Screen Ads
-To call a full-screen ad on supported adapters simply call
+To call a full-screen ad on supported adapters simply call:
 
-``` objectice-c
+``` objective-c
 [[LARSAdController sharedManager] loadInterstitial];
 ```
-to start loading the full-screen ad. Then call
+to start loading the full-screen ad. Then call:
 
 ``` objective-c
 [[LARSAdController sharedManager] displayInterstitial];
