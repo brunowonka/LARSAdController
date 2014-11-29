@@ -124,6 +124,21 @@ To make your life even _easier_, all you need to do is have each of your view co
 @end
 ```
 
+
+###Full-Screen Ads
+To call a full-screen ad on supported adapters simply call
+
+``` objectice-c
+[[LARSAdController sharedManager] loadInterstitial];
+```
+to start loading the full-screen ad. Then call
+
+``` objective-c
+[[LARSAdController sharedManager] displayInterstitial];
+```
+
+to display it. Every call to display must be matched with a load call beforehand. If the ad has not fully loaded during the time-frame nothing will happen.
+
 ####Conditionally Displaying Ads
 If you'd only like the ads to be displayed under certain conditions (like when a user has purchased a certain in-app upgrade), then simply override `-shouldDisplayAds` in your `TOLAdViewController` subclass. Ads will not be loaded on `viewWillAppear:` if `shouldDisplayAds` returns `NO`:
 
