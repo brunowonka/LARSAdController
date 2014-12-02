@@ -34,6 +34,14 @@ NSString * const kTOLAdAdapterBannerLoadedObserverKeyPath = @"bannerLoaded";
 
 @implementation TOLAdAdapteriAds
 
++ (BOOL)allowsBanner {
+    return YES;
+}
+
++ (BOOL)allowsInterstitial {
+    return NO;
+}
+
 - (void)dealloc {
     [_bannerView removeObserver:self
                          forKeyPath:kTOLAdAdapterBannerLoadedObserverKeyPath];

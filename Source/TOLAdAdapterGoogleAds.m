@@ -28,6 +28,15 @@
 @implementation TOLAdAdapterGoogleAds
 
 #pragma mark - Required Adapted Implementation
+
++ (BOOL)allowsBanner {
+    return YES;
+}
+
++ (BOOL)allowsInterstitial {
+    return NO;
+}
+
 - (GADBannerView *)bannerView {
     if (_bannerView == nil && _publisherId) {
         
@@ -63,6 +72,8 @@
 - (void)dealloc {
     _bannerView.delegate = nil;
     _bannerView = nil;
+    
+
     
     self.adManager = nil;
     self.publisherId = nil;
@@ -129,42 +140,6 @@
     TOLLog(@"Google ad did fail to receive ad");
 }
 
-
-#pragma mark - Interstitial protocol implementation
-- (void)loadInterstitial {
-    self.interstitial = [[GADInterstitial alloc] init];
-    self.interstitial.adUnitID = self.publisherId;
-    self.interstitial.delegate = self;
-    
-    GADRequest *request = [GADRequest request];
-    // Requests test ads on simulators.
-    request.testDevices = @[ GAD_SIMULATOR_ID ];
-    [self.interstitial loadRequest:request];
-}
-
-- (void)displayInterstitial {
-    if( _parentViewController != nil ) {
-        if( self.interstitial != nil ) {
-            if( self.interstitial.isReady ) {
-                [self.interstitial presentFromRootViewController:_parentViewController];
-                self.interstitial = nil; /* release it */
-            }
-        } else {
-            TOLWLog(@"Attempting to display unallocated interstitial");
-        }
-    } else {
-        TOLWLog(@"cannot display interstitial, controller does not have parent view");
-    }
-}
-
-#pragma mark - GADInterstitial delegate methos
-- (void)interstitialDidReceiveAd:(GADInterstitial *)ad {
-    TOLLog(@"got interstitial ad");
-}
-
-- (void)interstitial:(GADInterstitial *)ad didFailToReceiveAdWithError:(GADRequestError *)error {
-    TOLLog(@"failed to load interstitial ad");
-}
 
 /** Unused Google Ad Delegate Methods
 */

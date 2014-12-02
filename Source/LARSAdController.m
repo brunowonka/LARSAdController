@@ -560,6 +560,13 @@ CGFloat const kLARSAdContainerHeightPod = 50.0f;
 
 - (BOOL)startAdNetworkAdapterClass:(Class)klass withType:(LARSAdControllerAdapterInstanceTYpe)type {
     
+    if(
+      ( (![klass allowsBanner])  && type == LARSAdControllerAdapterInstanceBanner) ||
+      ( (![klass allowsInterstitial]) && type == LARSAdControllerAdapterInstanceInterstitial)
+       ) {
+        return NO;
+    }
+    
     NSObject <TOLAdAdapter> *adapter = nil;
     if( type == LARSAdControllerAdapterInstanceBanner ) {
         adapter = [self.adapterInstances objectForKey:NSStringFromClass(klass)];

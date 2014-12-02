@@ -38,9 +38,7 @@
 @protocol TOLAdAdapter <NSObject>
 
 @required
-/** The actual banner view that will be displaying ads for the ad vendor.
- */
-@property (strong, nonatomic) UIView *bannerView;
+
 
 /** A boolean flag that is set whenever an ad for this adapter is visible on screen. 
     The contents of this is managed by the ad controller.
@@ -51,8 +49,20 @@
  */
 @property (weak, nonatomic) id <LARSAdControllerDelegate> adManager;
 
-/** Lays out the banner view for a given orientation. Does not necessarily need to set the frame's 
-    origin correctly, just the banner's size. The banner's position is set by the ad controller.
+
++(BOOL) allowsBanner;
+
++(BOOL) allowsInterstitial;
+
+@optional
+
+
+/** The actual banner view that will be displaying ads for the ad vendor.
+ */
+@property (strong, nonatomic) UIView *bannerView;
+
+/** Lays out the banner view for a given orientation. Does not necessarily need to set the frame's
+ origin correctly, just the banner's size. The banner's position is set by the ad controller.
  
  @param interfaceOrientation The interface orientation to layout the banner view for
  @param containerView The UIView that the bannerView will live inside
@@ -61,7 +71,6 @@
 - (void)layoutBannerForInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
                                forContainer:(UIView *)containerView;
 
-@optional
 
 /** Starts ad requests. This method is optional because not all ad networks have a the concept of 
     "start" or "pause". If they are allocated and alive, they are service ads indefinitely until deallocated.
@@ -96,6 +105,11 @@
     publisher id (iAds, for example).
  */
 @property (copy, nonatomic) NSString *publisherId;
+
+/** Interstitial ad publisher Id
+    set a different publisher Id for interstitial Ads, if not set will fallback to default publisherId, if needed
+ */
+@property (copy,nonatomic) NSString * interstitialPublisherId;
 
 /** The parent view controller that is managing the view that the ad is currently living in.
  */
