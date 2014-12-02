@@ -137,7 +137,13 @@ to start loading the full-screen ad. Then call:
 [[LARSAdController sharedManager] displayInterstitial];
 ```
 
-to display it. Every call to display must be matched with a load call beforehand. If the ad has not fully loaded during the time-frame nothing will happen.
+to display it. Every call to display must be matched with a load call beforehand. If the ad has not fully loaded during the time-frame nothing will happen. Note GoogleAds use a different publisher id for interstitial ads, therefore another adapter must be registered with the ad manager:
+``` objective-c
+#import <LARSAdController/TOLAdAdapterGoogleAdsInterstitial.h>
+/* ... */
+   [[LARSAdController sharedManager] registerAdClass:[TOLAdApaterGoogleAdsInterstitial class]
+                                     withPublisherId: interstitialPublisherId];
+```
 
 ####Conditionally Displaying Ads
 If you'd only like the ads to be displayed under certain conditions (like when a user has purchased a certain in-app upgrade), then simply override `-shouldDisplayAds` in your `TOLAdViewController` subclass. Ads will not be loaded on `viewWillAppear:` if `shouldDisplayAds` returns `NO`:
